@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>logtide</title>
+  <meta name="description" content="logtide — security work (AppSec + Blue Team). Case studies, detections, incident notes." />
+  <style>
+    :root { --w: 860px; }
+    body { margin: 0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; line-height: 1.55; }
+    .wrap { max-width: var(--w); margin: 52px auto; padding: 0 18px; }
+    nav { display: flex; gap: 16px; margin-bottom: 28px; font-size: 14px; }
+    nav a { color: inherit; text-decoration: none; opacity: .8; }
+    nav a:hover { opacity: 1; text-decoration: underline; }
+    h1 { margin: 0 0 10px 0; font-size: 34px; letter-spacing: .2px; }
+    h2 { margin: 28px 0 10px 0; font-size: 16px; text-transform: uppercase; letter-spacing: .08em; opacity: .75; }
+    p { margin: 0 0 14px 0; }
+    ul { margin: 0; padding-left: 18px; }
+    li { margin: 6px 0; }
+    .muted { opacity: .75; font-size: 14px; }
+    .card { border: 1px solid rgba(127,127,127,.25); border-radius: 12px; padding: 14px 14px; margin: 10px 0; }
+    footer { margin-top: 42px; padding-top: 14px; border-top: 1px solid rgba(127,127,127,.25); }
+    code { font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size: 0.95em; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <nav>
+      <a href="/">Home</a>
+      <a href="/work/">Work</a>
+      <a href="/projects/">Projects</a>
+      <a href="/contact/">Contact</a>
+    </nav>
+
+    <header>
+      <h1>logtide</h1>
+      <p>
+        I do hands-on security work across <b>AppSec</b> (API / access control) and <b>Blue Team</b> (SOC / detection / incident response).
+      </p>
+      <p class="muted">
+        Everything here is reproducible and written with remediation in mind.
+      </p>
+    </header>
+
+    <section>
+      <h2>Featured work</h2>
+
+      <div class="card">
+        <b>Case study:</b> Broken Access Control (BOLA/IDOR) in APIs — methodology + evidence + fixes<br />
+        <span class="muted"><a href="/work/bola-idor.html">Read</a></span>
+      </div>
+
+      <div class="card">
+        <b>Investigation:</b> SIEM triage walkthrough — alert → pivots → conclusion<br />
+        <span class="muted"><a href="/work/incident-walkthrough.html">Read</a></span>
+      </div>
+
+      <div class="card">
+        <b>Detections:</b> Sigma rules + ATT&CK mapping + tuning notes<br />
+        <span class="muted"><a href="/projects/detections.html">See</a></span>
+      </div>
+    </section>
+
+    <section>
+      <h2>Projects</h2>
+      <ul>
+        <li><a href="/projects/">Tools & repos</a> (GitHub org: <code>github.com/logtide</code>)</li>
+        <li><span class="muted">Focus: authZ testing, telemetry-first investigations, detection engineering.</span></li>
+      </ul>
+    </section>
+
+    <footer>
+      <p><b>Contact</b>: <a href="mailto:YOUR_EMAIL">YOUR_EMAIL</a></p>
+      <p class="muted">Minimal site by design. The proof lives in the writeups and repos.</p>
+    </footer>
+  </div>
+</body>
+</html>
