@@ -37,8 +37,10 @@
       cursor: pointer;
     }
     button:hover { border-color: rgba(127,127,127,.7); }
+    button:disabled { opacity: .6; cursor: not-allowed; }
     .row { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
     @media (max-width: 720px) { .row { grid-template-columns: 1fr; } }
+    .status { margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -53,10 +55,7 @@
     <h1>Contact</h1>
     <p class="muted">Send a message here — it goes straight to my inbox.</p>
 
-    <form action="https://formspree.io/f/xdkqrqda" method="POST">
-      <!-- Redirect back to your own thank-you page -->
-      <input type="hidden" name="_redirect" value="https://logtide.github.io/contact/thanks.html">
-
+    <form id="contactForm" action="https://formspree.io/f/xdkqrqda" method="POST">
       <!-- Basic spam trap (humans won't fill it) -->
       <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off" />
 
@@ -77,8 +76,49 @@
       <label for="message">Message</label>
       <textarea id="message" name="message" required></textarea>
 
-      <button type="submit">Send</button>
+      <button id="sendBtn" type="submit">Send</button>
+      <p id="formStatus" class="muted status" aria-live="polite"></p>
     </form>
   </div>
+
+  <script>
+    const form = document.getElementById('contactForm');
+    const statusEl = document.getElementById('formStatus');
+    const sendBtn = document.getElementById('sendBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault(); // prevents redirect to formspree.io/thanks
+      statusEl.textContent = "Sending…";
+      sendBtn.disabled = true;
+
+      try {
+        const res = await fetch(form.action, {
+          method: "POST",
+          body: new FormData(form),
+          headers: { "Accept": "application/json" }
+        });
+
+        if (res.ok) {
+          window.location.href = "/contact/thanks.html";
+          return;
+        }
+
+        // Try to surface Formspree's error message if present
+        let msg = "Something went wrong. Please try again.";
+        try {
+          const data = await res.json();
+          if (data && data.errors && data.errors.length) {
+            msg = data.errors.map(e => e.message).join(" ");
+          }
+        } catch (_) {}
+
+        statusEl.textContent = msg;
+        sendBtn.disabled = false;
+      } catch (err) {
+        statusEl.textContent = "Network error. Please try again.";
+        sendBtn.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>
