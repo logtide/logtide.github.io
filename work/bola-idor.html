@@ -1,1 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>logtide — BOLA/IDOR case study</title>
+  <meta name="description" content="Case study: Broken Access Control (BOLA/IDOR) in APIs — methodology, evidence pattern, impact, remediation, regression tests." />
+  <style>
+    :root { --w: 860px; }
+    body { margin: 0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; line-height: 1.55; }
+    .wrap { max-width: var(--w); margin: 52px auto; padding: 0 18px; }
+    nav { display: flex; gap: 16px; margin-bottom: 28px; font-size: 14px; flex-wrap: wrap; }
+    nav a { color: inherit; text-decoration: none; opacity: .8; }
+    nav a:hover { opacity: 1; text-decoration: underline; }
+    h1 { margin: 0 0 10px 0; font-size: 28px; letter-spacing: .2px; }
+    h2 { margin: 28px 0 10px 0; font-size: 16px; text-transform: uppercase; letter-spacing: .08em; opacity: .75; }
+    p { margin: 0 0 14px 0; }
+    ul { margin: 0; padding-left: 18px; }
+    li { margin: 6px 0; }
+    .muted { opacity: .75; font-size: 14px; }
+    .box { border: 1px solid rgba(127,127,127,.25); border-radius: 12px; padding: 14px; margin: 12px 0; }
+    code { font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size: .95em; }
+    pre { overflow: auto; padding: 12px; border-radius: 12px; border: 1px solid rgba(127,127,127,.25); }
+    .tag { display:inline-block; border:1px solid rgba(127,127,127,.25); border-radius:999px; padding:3px 10px; margin-right:8px; font-size:12px; opacity:.9; }
+    footer { margin-top: 42px; padding-top: 14px; border-top: 1px solid rgba(127,127,127,.25); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <a href="/">Home</a>
+      <a href="/notes/">Notes</a>
+      <a href="/work/">Work</a>
+      <a href="/projects/">Projects</a>
+      <a href="/contact/">Contact</a>
+    </nav>
 
+    <h1>Case study: BOLA/IDOR in APIs</h1>
+    <p class="muted">
+      <span class="tag">AppSec</span>
+      <span class="tag">API</span>
+      <span class="tag">Access control</span>
+      <span class="tag">Offense-informed defense</span>
+    </p>
+
+    <div class="box">
+      <p style="margin:0;">
+        <b>Scope note:</b> This writeup is based on authorized testing patterns. Target identifiers and sensitive data are removed.
+        The goal is to show methodology, evidence structure, and remediation/regression thinking.
+      </p>
+    </div>
+
+    <h2>Executive summary</h2>
+    <p>
+      I tested object-level authorization in a multi-tenant API surface. The core question:
+      <b>does the server enforce ownership/tenant policy for every object access</b>?
+    </p>
+    <p>
+      The failure mode is common: the API accepts an object id and returns data without verifying the caller is permitted to act on that object.
+      This is often called <b>BOLA</b> (Broken Object Level Authorization) / <b>IDOR</b>.
+    </p>
+
+    <h2>Threat model</h2>
+    <ul>
+      <li><b>Actors:</b> authenticated user (low privilege), optionally within tenant A</li>
+      <li><b>Assets:</b> invoices, documents, profiles, orders, tickets (any object with an id)</li>
+      <li><b>Boundary:</b> tenant boundary + per-user ownership</li>
+      <li><b>Impact:</b> unauthorized read / update / delete depending on endpoint</li>
+    </ul>
+
+    <h2>Methodology (repeatable)</h2>
+    <ul>
+      <li>Inventory endpoints that take object ids in path/query/body.</li>
+      <li>For each endpoint, capture a baseline request as user A.</li>
+      <li>Obtain a valid object id belonging to user B / tenant B (in authorized test envs).</li>
+      <li>Replay the request as user A with the object id swapped.</li>
+      <li>Compare response: status code + body + side effects.</li>
+      <li>Record authZ decision evidence: 200 vs 403/404, metadata leaks, and any write impact.</li>
+    </ul>
+
+    <h2>Evidence pattern (sanitised)</h2>
+    <p class="muted">Example endpoint shape (sanitised):</p>
+    <pre><code>GET /api/v1/invoices/{invoice_id}
+Authorization: Bearer &lt;token&gt;</code></pre>
+
+    <p><b>Expected</b> (secure behavior):</p>
+    <ul>
+      <li>user A requesting user B’s invoice → 403 (forbidden) or 404 (not found), consistently</li>
+      <li>no sensitive metadata leakage (owner email, totals, addresses, etc.)</li>
+    </ul>
+
+    <p><b>Observed</b> (vulnerable pattern):</p>
+    <ul>
+      <li>user A can fetch invoice belonging to user B by swapping <code>{invoice_id}</code></li>
+      <li>response includes fields that confirm ownership and reveal sensitive details</li>
+    </ul>
+
+    <pre><code>// Request as user A (token_A) with invoice_id belonging to user B:
+GET /api/v1/invoices/INV-100492
+Authorization: Bearer token_A
+
+// Response (200 OK) contains:
+{
+  "invoice_id": "INV-100492",
+  "owner_user_id": "USER-B",
+  "tenant_id": "TENANT-B",
+  "amount": "...",
+  "billing_details": "...",
+  ...
+}</code></pre>
+
+    <div class="box">
+      <p style="margin:0;"><b>Why this is enough evidence:</b> The server returned a protected object for an unauthorized actor. That’s the boundary failure.</p>
+    </div>
+
+    <h2>Impact</h2>
+    <ul>
+      <li><b>Confidentiality:</b> unauthorized access to other users’/tenants’ data</li>
+      <li><b>Integrity:</b> if any update/delete endpoints share the same pattern, attacker may alter or remove data</li>
+      <li><b>Escalation:</b> object access can reveal identifiers enabling chaining (emails, references, internal ids)</li>
+    </ul>
+
+    <h2>Root cause (typical)</h2>
+    <ul>
+      <li>Authorization implemented as “filtering lists” but not enforced on “get by id”.</li>
+      <li>Service layer fetches by id only: <code>SELECT * FROM invoices WHERE id = ?</code></li>
+      <li>Missing policy check: <code>AND tenant_id = caller.tenant_id</code> or ownership check.</li>
+    </ul>
+
+    <h2>Remediation (what to change)</h2>
+    <ul>
+      <li><b>Enforce server-side object-level policy</b> on every endpoint that touches an object.</li>
+      <li>Prefer centralized authorization (policy function / middleware) rather than “remembering to check”.</li>
+      <li>Bind object fetch to actor context:
+        <ul>
+          <li><code>getInvoice(invoice_id, caller)</code> not <code>getInvoice(invoice_id)</code></li>
+        </ul>
+      </li>
+      <li>Avoid exposing internal ids; use non-guessable identifiers, but do not treat that as authorization.</li>
+      <li>Return consistent errors (403 vs 404) based on your disclosure policy, but be consistent.</li>
+    </ul>
+
+    <h2>Regression tests (what prevents reintroduction)</h2>
+    <div class="box">
+      <ul style="margin:0; padding-left:18px;">
+        <li>Tenant A cannot access Tenant B objects (read).</li>
+        <li>Tenant A cannot update/delete Tenant B objects (write).</li>
+        <li>User A cannot access User B objects within same tenant, if ownership applies.</li>
+        <li>List endpoints and detail endpoints must enforce the same policy.</li>
+      </ul>
+    </div>
+
+    <h2>Blue-team notes: how to detect abuse</h2>
+    <ul>
+      <li>Log <b>authZ decision</b>: allow/deny + reason + object id + actor + tenant.</li>
+      <li>Alert on high cardinality object id access by one actor (object sweep).</li>
+      <li>Alert on repeated deny bursts followed by allow (probing then success).</li>
+      <li>Alert on cross-tenant object access attempts even if blocked (it’s attacker behavior).</li>
+    </ul>
+
+    <h2>Deliverables</h2>
+    <ul>
+      <li>Writeup: this page</li>
+      <li>Next: a redacted report format + sample remediation guidance (to be added in org repos)</li>
+    </ul>
+
+    <p class="muted">
+      If you’re reviewing this as a hiring manager: I’m happy to walk through methodology live in a safe demo environment.
+    </p>
+
+    <footer>
+      <p class="muted">Related note: <a href="/notes/authz-boundary.html">Authorization is a boundary, not a feature.</a></p>
+    </footer>
+  </div>
+</body>
+</html>
