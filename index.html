@@ -1,79 +1,996 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>logtide</title>
-  <meta name="description" content="logtide — security work (AppSec + Blue Team). Case studies, detections, incident notes." />
-  <style>
-    :root { --w: 860px; }
-    body { margin: 0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; line-height: 1.55; }
-    .wrap { max-width: var(--w); margin: 52px auto; padding: 0 18px; }
-    nav { display: flex; gap: 16px; margin-bottom: 28px; font-size: 14px; }
-    nav a { color: inherit; text-decoration: none; opacity: .8; }
-    nav a:hover { opacity: 1; text-decoration: underline; }
-    h1 { margin: 0 0 10px 0; font-size: 34px; letter-spacing: .2px; }
-    h2 { margin: 28px 0 10px 0; font-size: 16px; text-transform: uppercase; letter-spacing: .08em; opacity: .75; }
-    p { margin: 0 0 14px 0; }
-    ul { margin: 0; padding-left: 18px; }
-    li { margin: 6px 0; }
-    .muted { opacity: .75; font-size: 14px; }
-    .card { border: 1px solid rgba(127,127,127,.25); border-radius: 12px; padding: 14px 14px; margin: 10px 0; }
-    footer { margin-top: 42px; padding-top: 14px; border-top: 1px solid rgba(127,127,127,.25); }
-    code { font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size: 0.95em; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>logtide cybersecurity analyst</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c10;
+    --bg2: #0d1219;
+    --bg3: #111820;
+    --green: #00e5a0;
+    --green-dim: #00b87e;
+    --green-glow: rgba(0,229,160,0.12);
+    --green-glow2: rgba(0,229,160,0.06);
+    --amber: #f0a500;
+    --red: #ff4d6d;
+    --blue: #4da6ff;
+    --text: #c8d8e8;
+    --text-dim: #5a7080;
+    --text-mid: #8aa0b0;
+    --border: rgba(0,229,160,0.12);
+    --border2: rgba(0,229,160,0.06);
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* ── GRID BACKGROUND ── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2rem 3rem;
+    background: rgba(8,12,16,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border2);
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--green);
+    letter-spacing: 0.05em;
+    text-decoration: none;
+  }
+
+  .nav-logo span { color: var(--text-dim); }
+
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--text-mid);
+    text-decoration: none;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--green); }
+
+  /* ── SECTIONS ── */
+  section {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  /* ── HERO ── */
+  #hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 5rem;
+    max-width: 900px;
+    margin: 0 auto;
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+
+  .hero-eyebrow {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+
+  .hero-eyebrow::before {
+    content: '> ';
+    color: var(--text-dim);
+  }
+
+  .hero-name {
+    font-family: var(--sans);
+    font-size: clamp(3rem, 8vw, 6rem);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    color: #fff;
+    margin-bottom: 0.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.4s;
+  }
+
+  .hero-name .accent { color: var(--green); }
+
+  .hero-title {
+    font-family: var(--mono);
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.6s;
+  }
+
+  .hero-title .tag {
+    display: inline-block;
+    background: var(--green-glow2);
+    border: 1px solid var(--border);
+    color: var(--green-dim);
+    padding: 2px 10px;
+    border-radius: 3px;
+    margin: 2px 3px;
+    font-size: 0.7rem;
+  }
+
+  .hero-desc {
+    max-width: 520px;
+    color: var(--text-mid);
+    line-height: 1.8;
+    font-size: 0.85rem;
+    margin-bottom: 2.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.8s;
+  }
+
+  .hero-ctas {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 1s;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--green);
+    color: #000;
+    padding: 0.7rem 1.5rem;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-radius: 3px;
+    transition: all 0.2s;
+    border: 1px solid var(--green);
+  }
+
+  .btn-primary:hover {
+    background: transparent;
+    color: var(--green);
+    box-shadow: 0 0 20px var(--green-glow);
+  }
+
+  .btn-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    color: var(--text-mid);
+    padding: 0.7rem 1.5rem;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+  }
+
+  .btn-outline:hover {
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .hero-scroll {
+    position: absolute;
+    bottom: 2rem;
+    left: 3rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 1.4s;
+  }
+
+  .hero-scroll::after {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 1px;
+    background: var(--text-dim);
+  }
+
+  /* ── SECTION HEADERS ── */
+  .section-wrap {
+    padding: 6rem 3rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::before { content: '//'; color: var(--text-dim); }
+
+  .section-title {
+    font-family: var(--sans);
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.1;
+    margin-bottom: 1rem;
+  }
+
+  .section-sub {
+    color: var(--text-mid);
+    font-size: 0.82rem;
+    max-width: 500px;
+    margin-bottom: 3rem;
+    line-height: 1.8;
+  }
+
+  /* ── REPOS ── */
+  .repos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 1px;
+    background: var(--border2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .repo-card {
+    background: var(--bg2);
+    padding: 1.5rem;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .repo-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 2px;
+    height: 0;
+    background: var(--green);
+    transition: height 0.3s ease;
+  }
+
+  .repo-card:hover { background: var(--bg3); }
+  .repo-card:hover::before { height: 100%; }
+
+  .repo-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .repo-icon {
+    width: 28px;
+    height: 28px;
+    background: var(--green-glow);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+  }
+
+  .repo-arrow {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    transition: color 0.2s, transform 0.2s;
+  }
+
+  .repo-card:hover .repo-arrow {
+    color: var(--green);
+    transform: translate(2px, -2px);
+  }
+
+  .repo-name {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.02em;
+  }
+
+  .repo-desc {
+    font-size: 0.78rem;
+    color: var(--text-mid);
+    line-height: 1.6;
+  }
+
+  .repo-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: auto;
+  }
+
+  .repo-tag {
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+
+  .repo-tag.green { border-color: rgba(0,229,160,0.3); color: var(--green-dim); }
+  .repo-tag.amber { border-color: rgba(240,165,0,0.3); color: var(--amber); }
+  .repo-tag.blue { border-color: rgba(77,166,255,0.3); color: var(--blue); }
+
+  /* ── SKILLS ── */
+  .skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+
+  .skill-block {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 1.25rem;
+    transition: border-color 0.2s;
+  }
+
+  .skill-block:hover { border-color: var(--border); }
+
+  .skill-category {
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .skill-category::before {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+  }
+
+  .skill-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .skill-pill {
+    font-size: 0.7rem;
+    color: var(--text-mid);
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    padding: 3px 9px;
+    border-radius: 3px;
+    transition: all 0.15s;
+  }
+
+  .skill-pill:hover {
+    border-color: var(--green-dim);
+    color: var(--text);
+  }
+
+  /* ── ARTICLES ── */
+  .article-card {
+    display: flex;
+    gap: 1.5rem;
+    padding: 1.5rem 0;
+    border-bottom: 1px solid var(--border2);
+    text-decoration: none;
+    transition: opacity 0.2s;
+    align-items: flex-start;
+  }
+
+  .article-card:hover { opacity: 0.8; }
+
+  .article-num {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    min-width: 24px;
+    padding-top: 4px;
+  }
+
+  .article-content { flex: 1; }
+
+  .article-title {
+    font-family: var(--sans);
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1.3;
+    margin-bottom: 6px;
+    transition: color 0.2s;
+  }
+
+  .article-card:hover .article-title { color: var(--green); }
+
+  .article-meta {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    display: flex;
+    gap: 12px;
+  }
+
+  .article-tag {
+    color: var(--green-dim);
+  }
+
+  .article-arrow {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    padding-top: 4px;
+    transition: color 0.2s, transform 0.2s;
+  }
+
+  .article-card:hover .article-arrow {
+    color: var(--green);
+    transform: translate(3px, -3px);
+  }
+
+  /* ── CONTACT ── */
+  .contact-block {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .contact-block::before {
+    content: '';
+    position: absolute;
+    top: -80px; left: 50%; transform: translateX(-50%);
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(0,229,160,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .contact-handle {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--green);
+    letter-spacing: 0.15em;
+    margin-bottom: 1rem;
+  }
+
+  .contact-heading {
+    font-family: var(--sans);
+    font-size: clamp(1.5rem, 4vw, 2.2rem);
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+  }
+
+  .contact-sub {
+    color: var(--text-mid);
+    font-size: 0.8rem;
+    max-width: 400px;
+    margin: 0 auto 2rem;
+    line-height: 1.8;
+  }
+
+  .contact-links {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .contact-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--text-mid);
+    text-decoration: none;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    padding: 0.6rem 1.2rem;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    transition: all 0.2s;
+  }
+
+  .contact-link:hover {
+    border-color: var(--green);
+    color: var(--green);
+    background: var(--green-glow2);
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 2rem;
+    border-top: 1px solid var(--border2);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  footer span { color: var(--green); }
+
+  /* ── TERMINAL CURSOR ── */
+  .cursor {
+    display: inline-block;
+    width: 8px;
+    height: 1em;
+    background: var(--green);
+    vertical-align: text-bottom;
+    animation: blink 1s step-end infinite;
+    margin-left: 2px;
+  }
+
+  /* ── STATUS BAR ── */
+  .statusbar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.4rem 3rem;
+    background: rgba(0,229,160,0.95);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #000;
+    text-transform: uppercase;
+  }
+
+  .statusbar-sep { color: rgba(0,0,0,0.3); }
+
+  .statusbar-right {
+    margin-left: auto;
+    display: flex;
+    gap: 1rem;
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  @keyframes scanline {
+    0% { top: -10%; }
+    100% { top: 110%; }
+  }
+
+  /* ── ATTCK BADGES ── */
+  .attck-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 1rem;
+  }
+
+  .attck-badge {
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+    padding: 3px 8px;
+    border-radius: 2px;
+    background: rgba(0,229,160,0.05);
+    border: 1px solid rgba(0,229,160,0.15);
+    color: var(--green-dim);
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 600px) {
+    nav { padding: 1rem 1.5rem; }
+    .nav-links { display: none; }
+    #hero { padding-left: 1.5rem; padding-right: 1.5rem; }
+    .section-wrap { padding: 4rem 1.5rem; }
+    .repos-grid { grid-template-columns: 1fr; }
+    .statusbar { display: none; }
+    .contact-block { padding: 2rem 1.25rem; }
+  }
+</style>
 </head>
-
 <body>
-  <div class="wrap">
-    <nav>
-      <a href="/">Home</a>
-      <a href="/work/">Work</a>
-      <a href="/projects/">Projects</a>
-      <a href="/contact/">Contact</a>
-    </nav>
 
-    <header>
-      <h1>logtide</h1>
-      <p>
-        I do hands-on security work across <b>AppSec</b> (API / access control) and <b>Blue Team</b> (SOC / detection / incident response).
-      </p>
-      <p class="muted">
-        Everything here is reproducible and written with remediation in mind.
-      </p>
-    </header>
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">log<span>tide</span></a>
+  <ul class="nav-links">
+    <li><a href="#work">Work</a></li>
+    <li><a href="#skills">Skills</a></li>
+    <li><a href="#writing">Writing</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
 
-    <section>
-      <h2>Featured work</h2>
-
-      <div class="card">
-        <b>Case study:</b> Broken Access Control (BOLA/IDOR) in APIs — methodology + evidence + fixes<br />
-        <span class="muted"><a href="/work/bola-idor.html">Read</a></span>
-      </div>
-
-      <div class="card">
-        <b>Investigation:</b> SIEM triage walkthrough — alert → pivots → conclusion<br />
-        <span class="muted"><a href="/work/incident-walkthrough.html">Read</a></span>
-      </div>
-
-      <div class="card">
-        <b>Detections:</b> Sigma rules + ATT&CK mapping + tuning notes<br />
-        <span class="muted"><a href="/projects/detections.html">See</a></span>
-      </div>
-    </section>
-
-    <section>
-      <h2>Projects</h2>
-      <ul>
-        <li><a href="/projects/">Tools & repos</a> (GitHub org: <code>github.com/logtide</code>)</li>
-        <li><span class="muted">Focus: authZ testing, telemetry-first investigations, detection engineering.</span></li>
-      </ul>
-    </section>
-
-    <footer>
-      <p><b>Contact</b>: <a href="mailto:YOUR_EMAIL">YOUR_EMAIL</a></p>
-      <p class="muted">Minimal site by design. The proof lives in the writeups and repos.</p>
-    </footer>
+<!-- HERO -->
+<div id="hero" style="position:relative;z-index:1;">
+  <p class="hero-eyebrow">cybersecurity analyst · london</p>
+  <h1 class="hero-name">log<span class="accent">tide</span></h1>
+  <p class="hero-title">
+    <span class="tag">AppSec</span>
+    <span class="tag">Detection Engineering</span>
+    <span class="tag">Threat Hunting</span>
+    <span class="tag">Incident Response</span>
+  </p>
+  <p class="hero-desc">
+    Building detection content, documenting web vulnerabilities, and writing about the security problems that existing frameworks weren't designed to catch. All research published openly at github.com/logtide.
+  </p>
+  <div class="hero-ctas">
+    <a href="https://github.com/logtide" target="_blank" class="btn-primary">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+      View GitHub
+    </a>
+    <a href="https://medium.com/@logtide" target="_blank" class="btn-outline">
+      Read Articles ↗
+    </a>
   </div>
-</body>
-</html>
+  <p class="hero-scroll">scroll to explore</p>
+</div>
+
+<div class="divider"></div>
+
+<!-- WORK / REPOS -->
+<div id="work" class="section-wrap">
+  <p class="section-label">Open source work</p>
+  <h2 class="section-title">Security Research<br>& Detection Content</h2>
+  <p class="section-sub">Four public repositories covering the full defensive security lifecycle from AppSec vulnerability research to detection engineering and incident response.</p>
+
+  <div class="repos-grid">
+
+    <a href="https://github.com/logtide/detection-engineering" target="_blank" class="repo-card">
+      <div class="repo-header">
+        <div class="repo-icon">⚡</div>
+        <span class="repo-arrow">↗</span>
+      </div>
+      <p class="repo-name">detection-engineering</p>
+      <p class="repo-desc">8 Sigma detection rules for Windows telemetry credential dumping, persistence, LOLBin abuse, lateral movement. Each rule paired with tuning notes and ATT&CK mapping.</p>
+      <div class="attck-row">
+        <span class="attck-badge">T1003.001</span>
+        <span class="attck-badge">T1053.005</span>
+        <span class="attck-badge">T1047</span>
+        <span class="attck-badge">T1105</span>
+        <span class="attck-badge">T1547.001</span>
+      </div>
+      <div class="repo-tags">
+        <span class="repo-tag green">Sigma</span>
+        <span class="repo-tag green">MITRE ATT&CK</span>
+        <span class="repo-tag">Windows</span>
+        <span class="repo-tag">SIEM</span>
+      </div>
+    </a>
+
+    <a href="https://github.com/logtide/soc-hunting" target="_blank" class="repo-card">
+      <div class="repo-header">
+        <div class="repo-icon">🔍</div>
+        <span class="repo-arrow">↗</span>
+      </div>
+      <p class="repo-name">soc-hunting</p>
+      <p class="repo-desc">6 KQL threat hunt queries for Microsoft Sentinel impossible travel, MFA fatigue, OAuth illicit consent, password spray, SMB lateral movement. Each hunt with triage notes.</p>
+      <div class="attck-row">
+        <span class="attck-badge">T1078</span>
+        <span class="attck-badge">T1621</span>
+        <span class="attck-badge">T1550.001</span>
+        <span class="attck-badge">T1110.003</span>
+        <span class="attck-badge">T1021.002</span>
+      </div>
+      <div class="repo-tags">
+        <span class="repo-tag blue">KQL</span>
+        <span class="repo-tag blue">Microsoft Sentinel</span>
+        <span class="repo-tag">Entra ID</span>
+        <span class="repo-tag">Identity</span>
+      </div>
+    </a>
+
+    <a href="https://github.com/logtide/appsec-case-studies" target="_blank" class="repo-card">
+      <div class="repo-header">
+        <div class="repo-icon">🔐</div>
+        <span class="repo-arrow">↗</span>
+      </div>
+      <p class="repo-name">appsec-case-studies</p>
+      <p class="repo-desc">5 AppSec case studies BOLA/IDOR, BFLA, JWT algorithm confusion, mass assignment, SSRF. Each documents root cause, impact, responsible reproduction, fix, and verification.</p>
+      <div class="repo-tags">
+        <span class="repo-tag amber">OWASP Top 10</span>
+        <span class="repo-tag amber">Burp Suite</span>
+        <span class="repo-tag">API Security</span>
+        <span class="repo-tag">Web Vulns</span>
+      </div>
+    </a>
+
+    <a href="https://github.com/logtide/incident-response-playbooks" target="_blank" class="repo-card">
+      <div class="repo-header">
+        <div class="repo-icon">📋</div>
+        <span class="repo-arrow">↗</span>
+      </div>
+      <p class="repo-name">incident-response-playbooks</p>
+      <p class="repo-desc">3 end-to-end IR playbooks for phishing/BEC, ransomware, and account takeover structured around the NIST IR lifecycle with triage checklists and regulatory obligations.</p>
+      <div class="repo-tags">
+        <span class="repo-tag">NIST IR</span>
+        <span class="repo-tag">Phishing</span>
+        <span class="repo-tag">Ransomware</span>
+        <span class="repo-tag">ATO</span>
+      </div>
+    </a>
+
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- SKILLS -->
+<div id="skills" class="section-wrap">
+  <p class="section-label">Technical skills</p>
+  <h2 class="section-title">Areas of Focus</h2>
+  <p class="section-sub">Built through independent research, freelance security engagements, and responsible disclosure work.</p>
+
+  <div class="skills-grid">
+    <div class="skill-block">
+      <p class="skill-category">Application Security</p>
+      <div class="skill-list">
+        <span class="skill-pill">OWASP Top 10</span>
+        <span class="skill-pill">Burp Suite</span>
+        <span class="skill-pill">API Security</span>
+        <span class="skill-pill">BOLA / IDOR</span>
+        <span class="skill-pill">JWT Attacks</span>
+        <span class="skill-pill">SSRF</span>
+        <span class="skill-pill">Mass Assignment</span>
+        <span class="skill-pill">Auth Bypass</span>
+      </div>
+    </div>
+    <div class="skill-block">
+      <p class="skill-category">Detection Engineering</p>
+      <div class="skill-list">
+        <span class="skill-pill">Sigma Rules</span>
+        <span class="skill-pill">MITRE ATT&CK</span>
+        <span class="skill-pill">KQL</span>
+        <span class="skill-pill">Microsoft Sentinel</span>
+        <span class="skill-pill">Log Analysis</span>
+        <span class="skill-pill">Alert Tuning</span>
+        <span class="skill-pill">Windows Events</span>
+        <span class="skill-pill">Sysmon</span>
+      </div>
+    </div>
+    <div class="skill-block">
+      <p class="skill-category">Languages & Tools</p>
+      <div class="skill-list">
+        <span class="skill-pill">Python</span>
+        <span class="skill-pill">JavaScript</span>
+        <span class="skill-pill">Bash</span>
+        <span class="skill-pill">Linux CLI</span>
+        <span class="skill-pill">Git / GitHub</span>
+        <span class="skill-pill">HTTP Analysis</span>
+        <span class="skill-pill">Browser DevTools</span>
+      </div>
+    </div>
+    <div class="skill-block">
+      <p class="skill-category">Incident Response</p>
+      <div class="skill-list">
+        <span class="skill-pill">NIST IR Lifecycle</span>
+        <span class="skill-pill">Phishing Triage</span>
+        <span class="skill-pill">Ransomware Response</span>
+        <span class="skill-pill">ATO Investigation</span>
+        <span class="skill-pill">Evidence Collection</span>
+        <span class="skill-pill">UK GDPR (72h)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- WRITING -->
+<div id="writing" class="section-wrap">
+  <p class="section-label">Writing</p>
+  <h2 class="section-title">Published Research</h2>
+  <p class="section-sub">Technical articles on the security problems that existing frameworks weren't designed to catch.</p>
+
+  <a href="https://medium.com/@logtide" target="_blank" class="article-card">
+    <span class="article-num">01</span>
+    <div class="article-content">
+      <p class="article-title">Agent Hijacking: Why Agentic AI Introduces Risks That Traditional AppSec Can't Catch</p>
+      <div class="article-meta">
+        <span class="article-tag">AI Security</span>
+        <span>·</span>
+        <span>OWASP Agentic AI Top 10</span>
+        <span>·</span>
+        <span>Mar 2026</span>
+      </div>
+    </div>
+    <span class="article-arrow">↗</span>
+  </a>
+
+  <div class="article-card" style="opacity:0.4; cursor:default;">
+    <span class="article-num">02</span>
+    <div class="article-content">
+      <p class="article-title">The Anatomy of an OAuth Consent Attack and the KQL to Catch It</p>
+      <div class="article-meta">
+        <span class="article-tag">Detection</span>
+        <span>·</span>
+        <span>Coming soon</span>
+      </div>
+    </div>
+    <span class="article-arrow" style="opacity:0">↗</span>
+  </div>
+
+  <div class="article-card" style="opacity:0.4; cursor:default; border-bottom:none;">
+    <span class="article-num">03</span>
+    <div class="article-content">
+      <p class="article-title">Why CertUtil Is Still the Most Abused LOLBin in 2026</p>
+      <div class="article-meta">
+        <span class="article-tag">Threat Detection</span>
+        <span>·</span>
+        <span>Coming soon</span>
+      </div>
+    </div>
+    <span class="article-arrow" style="opacity:0">↗</span>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- CONTACT -->
+<div id="contact" class="section-wrap">
+  <div class="contact-block">
+    <p class="contact-handle">> logtide</p>
+    <h2 class="contact-heading">Open to opportunities.</h2>
+    <p class="contact-sub">Currently seeking a sponsored role in application security, SOC analysis, or detection engineering. Happy to discuss freelance engagements too.</p>
+    <div class="contact-links">
+      <a href="https://github.com/logtide" target="_blank" class="contact-link">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        GitHub
+      </a>
+      <a href="https://medium.com/@logtide" target="_blank" class="contact-link">✍ Medium</a>
+      <a href="/cdn-cgi/l/email-protection#afc6cbcacec7dacdcccac1dbddcec3efc8c2cec6c381ccc0c2" class="contact-link">✉ Email</a>
+      <a href="https://twitter.com/logtide" target="_blank" class="contact-link">𝕏 Twitter</a>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <span>logtide</span> · cybersecurity analyst · london ·
+  all research published openly ·
+  <span>github.com/logtide</span>
+</footer>
+
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <span>logtide.github.io</span>
+  <span class="statusbar-sep">|</span>
+  <span>AppSec · Detection · IR</span>
+  <span class="statusbar-sep">|</span>
+  <span>London</span>
+  <div class="statusbar-right">
+    <span>4 repos</span>
+    <span class="statusbar-sep">|</span>
+    <span>open to work</span>
+    <span class="cursor" style="background:#000;"></span>
+  </div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.opacity = '1';
+        entry.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.repo-card, .skill-block, .article-card').forEach(el => {
+    el.style.opacity = '0';
+    el.style.tra
